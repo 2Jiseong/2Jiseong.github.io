@@ -156,7 +156,7 @@ function receiveAnswer(sdpString) {
         type: 'answer',
         sdp: sdpString
     };
-    url.setRemoteDescription(descObject);
+    local_peer.setRemoteDescription(descObject);
 }
 
 function cbCreateOfferError(error) {
