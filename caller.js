@@ -23,7 +23,7 @@ btn_send.addEventListener('click', onSend);
 // ---------------------------------------------------------------------------------
 function onSend(){
     //sendDataViaDataChannel(input_message.value);
-    g_mc_ws_component.sendMessage(Json.stringify({type :'77',text: input_message.value}));
+    g_mc_ws_component.sendMessage(JSON.stringify({type :'77',text: input_message.value}));
     document.querySelector("div#receive").innerHTML += '<br/>' + input_message.value;
 }
 // ---------------------------------------------------------------------------------
