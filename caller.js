@@ -6,51 +6,31 @@ function trace(arg) {
 }
 
 // UI Element Value
-var output_offerDesc = document.querySelector('textarea#output_offerDesc');
 var input_answerDesc = document.querySelector('textarea#input_answerDesc');
 
 var vid1 = document.querySelector('#vid1');
 var vid2 = document.querySelector('#vid2');
 
 var btn_start = document.querySelector('#btn_start');
-var btn_finalOffer = document.querySelector('#btn_finalOffer');
-var btn_receiveAnswer = document.querySelector('#btn_receiveAnswer');
+
+var input_message = document.querySelector('#message');
+var btn_send = document.querySelector('#btn_send');
+
+var roodId = document.querySelector('#room_id');
 
 btn_start.addEventListener('click', onStart);
-btn_finalOffer.addEventListener('click', onOffer);
-btn_receiveAnswer.addEventListener('click', onReceiveAnswer);
-
-var snapshotButton = document.querySelector('button#snapshot');
-var toggleMirrorButton = document.querySelector('button#toggle-mirror');
-var filterSelect = document.querySelector('select#filter');
-
-var canvas = window.canvas = document.querySelector('canvas');
-canvas.width = 480;
-canvas.height = 360;
-
-snapshotButton.onclick = function() {
-    canvas.className = filterSelect.value;
-    canvas.getContext('2d').drawImage(vid1, 0, 0, canvas.width, canvas.height);
-};
-
-filterSelect.onchange = function() {
-    vid1.className = filterSelect.value;
-};
-
-var vidClassName = '';
-toggleMirrorButton.onclick = function() {
-    if (!vidClassName)
-        vidClassName = 'mirror';
-    else 
-        vidClassName = '';
-    vid1.className = vidClassName;
-};
-
+btn_send.addEventListener('click', onSend);
+// ---------------------------------------------------------------------------------
+function onSend(){
+    sendDataViaDataChannel(input_message.value);
+}
 // ---------------------------------------------------------------------------------
 
 // Value
 var local_peer = null;
 var localstream = null;
+
+var sendChannel = null;
 // ---------------------------------------------------------------------------------
 function cbGotStream(stream) {
     trace('Received local stream');
@@ -75,6 +55,26 @@ function cbGotRemoteStream(evt) {
     }
 }
 
+function onWsMessage(messageEvt) {
+    console.info(messageEvt);
+
+    var obj = JSON.parse(messageEvt.data);
+    if (obj.code == '99') {
+        alert(obj.msg);
+    }
+    else if (obj.code == '01') {
+        // start
+        console.info('start in onWsMessage');
+        onOffer();
+    }
+    else if (obj.code == '00') {
+        receiveAnswer(obj.msg);
+    }    
+    else {
+        alert('unknown error in onWsMessage');
+    }    
+}
+
 function onStart() {
     var cfg = {
         iceTransportPolicy: "all", // set to "relay" to force TURN.
@@ -82,12 +82,17 @@ function onStart() {
         ]
     };
     // cfg.iceServers.push({urls: "stun:stun.l.google.com:19302"});
+    // cfg.iceServers.push({
+    //     urls: "turn:webrtc.moberan.com",
+    //     username: "zoops", credential: "1234"
+    // });
+
     local_peer = new RTCPeerConnection(cfg);
     local_peer.onicecandidate = function (evt) {
         cbIceCandidate(local_peer, evt);
     };
+    
     local_peer.ontrack = cbGotRemoteStream;
-
     localstream.getTracks().forEach(
         function (track) {
             local_peer.addTrack(
@@ -97,7 +102,36 @@ function onStart() {
         }
     );
 
+    var dataConstraint = {
+        reliable: false
+    };
+    sendChannel = local_peer.createDataChannel('sendDataChannel', dataConstraint);
+    trace('Created send data channel');
+    console.log("Channel state: " + sendChannel.readyState);
+
+    sendChannel.onopen  = cbChannelStateChange;
+    sendChannel.onclose = cbChannelStateChange;
+    sendChannel.onmessage = function(event){
+        console.info('sendChannel.onmessage : ' + event.data);
+        document.querySelector("div#receive").innerHTML += '<br/>' + event.data;
+    };
+
+    var url = 'ws://127.0.0.1:3001/room/' + roodId.value;
+    // var url = 'wss://zoops-webrtc-01.herokuapp.com/room/' + roodId.value;
+    g_mc_ws_component.connect(url, onWsMessage);
+    
     trace('## start success = create RTCPeerConnection and set callback ');
+}
+
+function cbChannelStateChange() {
+    var readyState = sendChannel.readyState;
+    trace('sendChannel state is: ' + readyState);
+}
+
+function sendDataViaDataChannel(data) {
+    sendChannel.send(data);
+    document.querySelector("div#receive").innerHTML += '<br/>' + data;
+    trace('Sent Data: ' + data);
 }
 
 function onOffer() {
@@ -119,17 +153,10 @@ function onOffer() {
 function receiveAnswer(sdpString) {
     trace('receiveAnswer');
     var descObject = {
-        type: 'pranswer',
+        type: 'answer',
         sdp: sdpString
     };
     local_peer.setRemoteDescription(descObject);
-}
-
-function onReceiveAnswer() {
-    var sdpString = input_answerDesc.value;
-    receiveAnswer(sdpString);
-
-    trace('## receiveAnswer success');
 }
 
 function cbCreateOfferError(error) {
@@ -154,6 +181,10 @@ function cbSetLocalDescriptionError(error) {
 }
 
 function stop() {
+    if (sendChannel != null)
+        sendChannel.close();
+    sendChannel = null;
+
     if (local_peer != null)
         local_peer.close();
     local_peer = null;
@@ -173,5 +204,5 @@ function cbCheckIceCandidateAdded(candidateObject) {
 
 function cbCheckIceCandidateCompleted(descObject) {
     trace('cbCheckIceCandidateCompleted');
-    output_offerDesc.value = descObject.sdp;
+    g_mc_ws_component.sendMessage(descObject.sdp);
 }
