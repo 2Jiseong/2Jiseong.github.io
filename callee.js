@@ -101,7 +101,7 @@ function onStart() {
     
     local_peer.ondatachannel = cbDtatChannel;
 
-    var url = 'ws://127.0.0.1:3001/room/' + roodId.value;
+    var url = 'wss://jiseong-svr-express-2.herokuapp.com/room/' + roodId.value;
     // var url = 'wss://zoops-webrtc-01.herokuapp.com/room/' + roodId.value;
     g_mc_ws_component.connect(url, onWsMessage);
 
@@ -188,7 +188,7 @@ function receiveOffer(sdpString) {
         type: 'offer',
         sdp: sdpString
     };
-    local_peer.setRemoteDescription(descObject).then(
+    url.setRemoteDescription(descObject).then(
         cbSetRemoteDescriptionSuccess,
         cbSetRemoteDescriptionError,
     );    

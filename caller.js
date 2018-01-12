@@ -116,7 +116,7 @@ function onStart() {
         document.querySelector("div#receive").innerHTML += '<br/>' + event.data;
     };
 
-    var url = 'ws://127.0.0.1:3001/room/' + roodId.value;
+    var url = 'wss://jiseong-svr-express-2.herokuapp.com/room/' + roodId.value;
     // var url = 'wss://zoops-webrtc-01.herokuapp.com/room/' + roodId.value;
     g_mc_ws_component.connect(url, onWsMessage);
     
@@ -129,7 +129,7 @@ function cbChannelStateChange() {
 }
 
 function sendDataViaDataChannel(data) {
-    sendChannel.send(data);
+    url.send(data);
     document.querySelector("div#receive").innerHTML += '<br/>' + data;
     trace('Sent Data: ' + data);
 }
@@ -156,7 +156,7 @@ function receiveAnswer(sdpString) {
         type: 'answer',
         sdp: sdpString
     };
-    local_peer.setRemoteDescription(descObject);
+    url.setRemoteDescription(descObject);
 }
 
 function cbCreateOfferError(error) {
