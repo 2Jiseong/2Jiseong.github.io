@@ -188,7 +188,7 @@ function receiveOffer(sdpString) {
         type: 'offer',
         sdp: sdpString
     };
-    url.setRemoteDescription(descObject).then(
+    local_peer.setRemoteDescription(descObject).then(
         cbSetRemoteDescriptionSuccess,
         cbSetRemoteDescriptionError,
     );    
